@@ -108,14 +108,12 @@ class TransBlocks(nn.Module):
 
         self.norm = norm_layer(embed_dim) 
         self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-        # self.head = nn.Sequential(nn.Linear(embed_dim, num_classes), nn.Sigmoid()) if num_classes > 0 else nn.Identity()
 
         self.return_dense = return_dense
         self.mix_token = mix_token
 
         if return_dense:
             self.aux_head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-            # self.aux_head = nn.Sequential(nn.Linear(embed_dim, num_classes), nn.Sigmoid()) if num_classes > 0 else nn.Identity()
         if mix_token:
             self.beta = 1.0
             assert return_dense, "always return all features when mixtoken is enabled"
@@ -147,7 +145,6 @@ class TransBlocks(nn.Module):
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
 
-    # * 输入源数据，获取特征向量 token
     def forward_emdeddings(self, x):
         x = self.patch_embed(x)
 
@@ -165,7 +162,7 @@ class TransBlocks(nn.Module):
         x = torch.cat((cls_tokens, x), dim= 1)
         x = x + self.pos_embed
         x = self.pos_drop(x)
-        a = 0   # * 层数计数器
+        a = 0   
         x_star = torch.zeros(x.shape)
         x_end = torch.zeros(x.shape).cuda()
 
@@ -185,8 +182,6 @@ class TransBlocks(nn.Module):
         return x, x_star, x_end
 
 
-
-    # ! 前向主函数
     def forward(self, x):
         x = self.forward_emdeddings(x)
         if self.mix_token and self.training:
@@ -238,7 +233,7 @@ class TransBlocks(nn.Module):
 def vit_acct(pretrained=False, **kwargs): 
     model = TransBlocks(patch_size=config.patch_size, embed_dim=config.embed_dim, depth=config.depth,
                    num_heads=config.num_heads, mlp_ratio=3.,
-                   p_emb='complex', skip_lam=2., return_dense=True, mix_token=True, **kwargs)
+                   skip_lam=2., return_dense=True, mix_token=True, **kwargs)
     return model
 
 
