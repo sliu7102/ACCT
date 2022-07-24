@@ -1,8 +1,13 @@
-r"""    layers module for lvvit
-author: sliu
-readme: rewrite of token labeling
 
+
+r"""
+    @Author : sliu
+    @README : layers module for lvvit
+    @Date   : 2022-07-25 02: 29: 17
+    @Related: 
 """
+
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -107,7 +112,6 @@ class Attention(nn.Module):
             self.head_dim = head_dim
         self.scale = qk_scale or head_dim ** -0.5
 
-        # * 同时获取 3 个矩阵: Q, K, V
         self.qkv = nn.Linear(dim, self.head_dim * self.num_heads * 3, bias= qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(self.head_dim* self.num_heads, dim)
@@ -115,15 +119,11 @@ class Attention(nn.Module):
 
     def forward(self, x, padding_mask = None):
 
-        # ! 注意这里的输入为: B, N, C
         B, N, C = x.shape
-        # * (b, n, c)  -->>  (b, n, 6*21*3=378)  -->>  (b, n, 3, 6, 21)  -->>  (3, b, 6, n, 21)
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4)
 
-        # B,heads,N,C/heads 
         q, k, v = qkv[0], qkv[1], qkv[2]
 
-        # trick here to make q@k.t more stable
         attn = ((q * self.scale) @ k.transpose(-2, -1))
 
         if padding_mask is not None:
@@ -167,7 +167,6 @@ class Block(nn.Module):
         self.attn = Attention(
             dim, num_heads= num_heads, head_dim= head_dim, qkv_bias= qkv_bias, qk_scale= qk_scale, attn_drop= attn_drop, proj_drop= drop
         )
-        # ? nn.Identity() 的作用？  -- identity模块不改变输入
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
         self.mlp = Mlp(in_features= dim, hidden_features= self.mlp_hidden_dim, act_layer= act_layer, drop= drop, group= group)
@@ -287,23 +286,22 @@ class PatchEmbedComplex(nn.Module):
         new_patch_size = patch_size // 2
 
         num_patches = img_size // patch_size
-        # * 定义全局变量
         self.img_size = img_size
         self.patch_size = patch_size
         self.num_patches = num_patches
         self.embed_dim = embed_dim
 
-        mid_chans = 96  # * 384
+        mid_chans = 96
 
-        self.conv1 = nn.Conv1d(in_chans, mid_chans, kernel_size= 17, stride= 2, padding= 8, bias= False)  # * N = 1024
+        self.conv1 = nn.Conv1d(in_chans, mid_chans, kernel_size= 17, stride= 2, padding= 8, bias= False)
         self.bn1 = nn.BatchNorm1d(mid_chans)
         self.relu = nn.LeakyReLU(inplace= True)
-        self.conv2 = nn.Conv1d(mid_chans, mid_chans *2, kernel_size= 15, stride= 1, padding= 7, bias= False)  # * N = 1024
+        self.conv2 = nn.Conv1d(mid_chans, mid_chans *2, kernel_size= 15, stride= 1, padding= 7, bias= False) 
         self.bn2 = nn.BatchNorm1d(mid_chans *2)
-        self.conv3 = nn.Conv1d(mid_chans *2, mid_chans *2, kernel_size= 9, stride= 1, padding= 4, bias= False)  # * N = 1024
+        self.conv3 = nn.Conv1d(mid_chans *2, mid_chans *2, kernel_size= 9, stride= 1, padding= 4, bias= False)
         self.bn3 = nn.BatchNorm1d(mid_chans *2)
         
-        self.conv4 = nn.Conv1d(mid_chans *2, mid_chans *3, kernel_size= 5, stride= 1, padding= 2, bias= False)  # * N = 1024
+        self.conv4 = nn.Conv1d(mid_chans *2, mid_chans *3, kernel_size= 5, stride= 1, padding= 2, bias= False) 
         self.bn4 = nn.BatchNorm1d(mid_chans *3)
 
         self.proj = nn.Conv1d(mid_chans *3, embed_dim, kernel_size= new_patch_size, stride= new_patch_size)
